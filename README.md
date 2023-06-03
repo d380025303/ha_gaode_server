@@ -13,14 +13,6 @@
 
 需要配合[ha_gaode](https://github.com/d380025303/ha_gaode) 一起食用
 
-## HACS 安装
-1. HACS > 集成 浏览并下载存储库 > 搜索 ```dxgaodeserver```，点击下载
-2. 参见`手动安装`第三步及以后
-
-如果搜索不到, 可手动添加自定义存储库
-- 存储库: https://github.com/d380025303/ha_gaode_server
-- 类别: 集成
-
 ## 手动安装
 1. 下载 `custom_components\ha_gaode_server` 下的所有文件
 1. 复制到 `\config\custom_components` (包括ha_gaode_server文件夹)
@@ -31,3 +23,13 @@
     ha_gaode_server:
       gaode_server_key: 你的高德serverkey  # tips: 此key需要是"Web服务"类型, 需要与Web端(JS API)区分开 
     ```
+
+~~## HACS 安装~~
+
+~~1. HACS > 集成 浏览并下载存储库 > 搜索 ```dxgaodeserver```，点击下载~~
+
+~~2. 参见`手动安装`第三步及以后~~
+
+~~如果搜索不到, 可手动添加自定义存储库~~
+~~- 存储库: https://github.com/d380025303/ha_gaode_server~~
+~~- 类别: 集成~~
