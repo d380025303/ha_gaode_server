@@ -6,6 +6,11 @@ from .dx_exception import GaoDeException
 from homeassistant.components.http import HomeAssistantView
 from aiohttp import web
 from datetime import datetime, timedelta
+from homeassistant.const import (
+    STATE_HOME,
+    STATE_NOT_HOME,
+)
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -13,10 +18,12 @@ _LOGGER = logging.getLogger(__name__)
 class DxGpsLogger:
     gps_obj_dict = {}
     gaode_server_key = ""
+    change_gpslogger_state = True
 
-    def __init__(self, hass, gaode_server_key):
+    def __init__(self, hass, config):
         self.hass = hass
-        self.gaode_server_key = gaode_server_key
+        self.gaode_server_key = config.get("gaode_server_key")
+        self.change_gpslogger_state = config.get("change_gpslogger_state")
 
     async def clear_gps_obj_dict(self, now):
         delete_datetime = now - timedelta(days=1)
@@ -50,6 +57,7 @@ class DxGpsLogger:
         new_state = data.get("new_state")
         attributes = new_state.attributes
         last_changed = new_state.last_changed
+        gpslogger_state = new_state.state
         latitude = attributes.get("latitude")
         longitude = attributes.get("longitude")
         gcj02_longitude = attributes.get("gcj02_longitude")
@@ -68,7 +76,7 @@ class DxGpsLogger:
                 str(longitude),
             )
             ll = await self._transform_gps(entity_id, latitude, longitude)
-            dd = await self._calc_distance_of_zone(entity_id, ll)
+            dd = await self._calc_distance_of_zone(entity_id, gpslogger_state, ll)
             _LOGGER.info(ll)
             _LOGGER.info(dd)
 
@@ -85,15 +93,15 @@ class DxGpsLogger:
                     not_append_ind = True
 
             clone_attributes = dict(attributes)
-            now_state = new_state
+            now_state = gpslogger_state
             if ll is not None:
                 clone_attributes["gcj02_longitude"] = ll["gcj02_longitude"]
                 clone_attributes["gcj02_latitude"] = ll["gcj02_latitude"]
             if dd is not None:
                 dx_state = dd["dx_state"]
-                now_state = dx_state
+                if self.change_gpslogger_state:
+                    now_state = dx_state
                 clone_attributes["dx_state"] = dx_state
-                clone_attributes["dx_state_entity_id"] = dd["dx_state_entity_id"]
                 clone_attributes["dx_distance"] = dd["dx_distance"]
                 clone_attributes["dx_pre_state"] = dd["dx_pre_state"]
             clone_attributes["dx_record_datetime"] = last_changed.strftime(
@@ -202,7 +210,7 @@ class DxGpsLogger:
                 origins_zone_list.append(origins_zone)
         return origins_zone_list, "|".join(origins_list)
 
-    async def _calc_distance_of_zone(self, entity_id, ll):
+    async def _calc_distance_of_zone(self, entity_id, new_state, ll):
         _LOGGER.info("_calc_distance_of_zone")
         key = self.gaode_server_key
 
@@ -221,8 +229,7 @@ class DxGpsLogger:
             ):
                 return {
                     "dx_state": last_gpslogger_dx_state,
-                    "dx_state_entity_id": last_gpslogger["dx_state_entity_id"],
-                    "dx_distance": -1,
+                    "dx_distance": last_gpslogger["dx_distance"],
                     "dx_pre_state": last_gpslogger_dx_state,
                 }
 
@@ -232,8 +239,7 @@ class DxGpsLogger:
         origins_zone_list, origins = self._handle_origins(zone_list)
         if len(origins_zone_list) == 0:
             return {
-                "dx_state": "dx_unknown",
-                "dx_state_entity_id": "",
+                "dx_state": new_state,
                 "dx_distance": -1,
                 "dx_pre_state": "",
             }
@@ -271,15 +277,13 @@ class DxGpsLogger:
                         if int(radius) > int(distance):
                             if zone_entity_id == "zone.home":
                                 return_value = {
-                                    "dx_state": "dx_in_home",
-                                    "dx_state_entity_id": zone_entity_id,
+                                    "dx_state": STATE_HOME,
                                     "dx_distance": int(distance),
                                     "dx_pre_state": last_gpslogger_dx_state,
                                 }
                             else:
                                 return_value = {
-                                    "dx_state": "dx_in_zone",
-                                    "dx_state_entity_id": zone_entity_id,
+                                    "dx_state": zone_entity_id,
                                     "dx_distance": int(distance),
                                     "dx_pre_state": last_gpslogger_dx_state,
                                 }
@@ -298,8 +302,7 @@ class DxGpsLogger:
             return return_value
         else:
             return {
-                "dx_state": "dx_out",
-                "dx_state_entity_id": "",
+                "dx_state": STATE_NOT_HOME,
                 "dx_distance": -1,
                 "dx_pre_state": last_gpslogger_dx_state,
             }
