@@ -1,0 +1,32 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "设备已经配置"
+        },
+        "error": {
+            "cannot_connect": "连接失败",
+            "invalid_auth": "用户名或密码错误",
+            "unknown": "未知错误"
+        },
+        "step": {
+            "user": {
+                "title":"ha_gaopde_server 配置",
+                "data": {
+                    "gaode_server_key": "高德Server Key",
+                    "change_gpslogger_state": "是否修改GPS State状态",
+                    "db_url": "GPS数据库存储地址"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "user":{
+                "data": {
+					"gaode_server_key": "高德Server Key"
+                },
+                "description": "ha_gaopde_server 配置"
+            }
+        }
+    }
+}

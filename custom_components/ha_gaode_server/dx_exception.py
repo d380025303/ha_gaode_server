@@ -4,3 +4,7 @@ class GaoDeException(Exception):
 
 class ConfigException(Exception):
     pass
+
+
+class DbException(Exception):
+    pass

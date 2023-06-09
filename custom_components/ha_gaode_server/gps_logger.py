@@ -9,27 +9,59 @@ from datetime import datetime, timedelta
 from homeassistant.const import (
     STATE_HOME,
     STATE_NOT_HOME,
+    ATTR_ENTITY_ID,
+    ATTR_LATITUDE,
+    ATTR_LONGITUDE,
+    CONF_RADIUS,
+    CONF_ZONE,
+)
+from homeassistant.core import HomeAssistant, Config
+from .db import DxDb
+from .const import (
+    CUSTOM_ATTR_DX_RECORD_DATETIME,
+    EVENT_NEW_STATE,
+    CUSTOM_ATTR_GCJ02_LATITUDE,
+    CUSTOM_ATTR_GCJ02_LONGITUDE,
+    CUSTOM_ATTR_DX_STATE,
+    CUSTOM_ATTR_DX_DISTANCE,
+    CUSTOM_ATTR_DX_PRE_STATE,
+    DEFAULT_DX_RECORD_DATETIME_FORMAT,
 )
 
-
 _LOGGER = logging.getLogger(__name__)
+from .db import DxDb
 
 
 class DxGpsLogger:
-    gps_obj_dict = {}
-    gaode_server_key = ""
-    change_gpslogger_state = True
+    """
+    Enhance GPSLogger Class
+    """
 
-    def __init__(self, hass, config):
+    gps_obj_dict = {}
+    gaode_server_key = None
+    change_gpslogger_state = True
+    db_instance: DxDb = None
+
+    def __init__(self, hass: HomeAssistant, config: Config) -> None:
         self.hass = hass
         self.gaode_server_key = config.get("gaode_server_key")
         self.change_gpslogger_state = config.get("change_gpslogger_state")
+        self.db_instance = config.get("db_instance")
 
     async def clear_gps_obj_dict(self, now):
+        """
+        Clear cache of gps_obj
+
+        Parameters:
+            now (datetime): datetime of now
+        """
         delete_datetime = now - timedelta(days=1)
         for key, value in self.gps_obj_dict.items():
+            # FIXME
             filtered_list = [
-                item for item in value if delete_datetime < item["dx_record_datetime"]
+                item
+                for item in value
+                if delete_datetime < item[CUSTOM_ATTR_DX_RECORD_DATETIME]
             ]
             self.gps_obj_dict[key] = filtered_list
         filtered_dict = {
@@ -38,12 +70,30 @@ class DxGpsLogger:
         self.gps_obj_dict = filtered_dict
 
     def get_obj_list_by_entity_id(self, entity_id):
+        """
+        This function to get gps data by entity_id in cache.
+
+        Parameters:
+            entity_id (str): The entity_id.
+
+        Returns:
+            List: gps data list, [] for no any data.
+        """
         if entity_id in self.gps_obj_dict:
             gps_obj_list = self.gps_obj_dict[entity_id]
             return gps_obj_list
         return []
 
     def get_last_obj_4_entity_id(self, entity_id):
+        """
+        This function to get last gps data by entity_id in cache.
+
+        Parameters:
+            entity_id (str): The entity_id.
+
+        Returns:
+            dict: latest gps data, None for no any data.
+        """
         if entity_id in self.gps_obj_dict:
             gps_obj_list = self.gps_obj_dict[entity_id]
             if len(gps_obj_list) > 0:
@@ -51,41 +101,50 @@ class DxGpsLogger:
                 return gps_obj
         return None
 
-    async def handle_gps_event(self, event):
+    async def handle_gps_event(self, event) -> None:
+        """
+        To handle GPSLogger Event
+
+        Parameters:
+            event (object): The hass event.
+
+        Returns:
+            None
+        """
         data = event.data
-        entity_id = data.get("entity_id")
-        new_state = data.get("new_state")
+        entity_id = data.get(ATTR_ENTITY_ID)
+        new_state = data.get(EVENT_NEW_STATE)
         attributes = new_state.attributes
         last_changed = new_state.last_changed
         gpslogger_state = new_state.state
-        latitude = attributes.get("latitude")
-        longitude = attributes.get("longitude")
-        gcj02_longitude = attributes.get("gcj02_longitude")
-        gcj02_latitude = attributes.get("gcj02_latitude")
+        latitude = attributes.get(ATTR_LATITUDE)
+        longitude = attributes.get(ATTR_LONGITUDE)
+        gcj02_longitude = attributes.get(CUSTOM_ATTR_GCJ02_LONGITUDE)
+        gcj02_latitude = attributes.get(CUSTOM_ATTR_GCJ02_LATITUDE)
         if gcj02_longitude and gcj02_latitude:
-            _LOGGER.info(
-                "this gps have been set, gcj02_longitude: %s, gcj02_latitude: %s",
+            _LOGGER.debug(
+                "This gps have been set, gcj02_longitude: %s, gcj02_latitude: %s",
                 gcj02_longitude,
                 gcj02_latitude,
             )
         elif latitude and longitude:
-            _LOGGER.info(
-                "entity_id: %s latitude: %s longitude: %s",
+            _LOGGER.debug(
+                "Entity_id: %s latitude: %s longitude: %s",
                 entity_id,
                 str(latitude),
                 str(longitude),
             )
             ll = await self._transform_gps(entity_id, latitude, longitude)
             dd = await self._calc_distance_of_zone(entity_id, gpslogger_state, ll)
-            _LOGGER.info(ll)
-            _LOGGER.info(dd)
+            _LOGGER.debug(ll)
+            _LOGGER.debug(dd)
 
             last_gpslogger = self.get_last_obj_4_entity_id(entity_id)
             # 如果经纬度跟上次一样, 不记录
             not_append_ind = False
             if last_gpslogger is not None:
-                last_gpslogger_longitude = last_gpslogger["longitude"]
-                last_gpslogger_latitude = last_gpslogger["latitude"]
+                last_gpslogger_longitude = last_gpslogger[ATTR_LONGITUDE]
+                last_gpslogger_latitude = last_gpslogger[ATTR_LATITUDE]
                 if (
                     last_gpslogger_longitude == longitude
                     and last_gpslogger_latitude == latitude
@@ -95,17 +154,23 @@ class DxGpsLogger:
             clone_attributes = dict(attributes)
             now_state = gpslogger_state
             if ll is not None:
-                clone_attributes["gcj02_longitude"] = ll["gcj02_longitude"]
-                clone_attributes["gcj02_latitude"] = ll["gcj02_latitude"]
+                clone_attributes[CUSTOM_ATTR_GCJ02_LONGITUDE] = ll[
+                    CUSTOM_ATTR_GCJ02_LONGITUDE
+                ]
+                clone_attributes[CUSTOM_ATTR_GCJ02_LATITUDE] = ll[
+                    CUSTOM_ATTR_GCJ02_LATITUDE
+                ]
             if dd is not None:
-                dx_state = dd["dx_state"]
+                dx_state = dd[CUSTOM_ATTR_DX_STATE]
                 if self.change_gpslogger_state:
                     now_state = dx_state
-                clone_attributes["dx_state"] = dx_state
-                clone_attributes["dx_distance"] = dd["dx_distance"]
-                clone_attributes["dx_pre_state"] = dd["dx_pre_state"]
-            clone_attributes["dx_record_datetime"] = last_changed.strftime(
-                "%Y-%m-%d %H:%M:%S"
+                clone_attributes[CUSTOM_ATTR_DX_STATE] = dx_state
+                clone_attributes[CUSTOM_ATTR_DX_DISTANCE] = dd[CUSTOM_ATTR_DX_DISTANCE]
+                clone_attributes[CUSTOM_ATTR_DX_PRE_STATE] = dd[
+                    CUSTOM_ATTR_DX_PRE_STATE
+                ]
+            clone_attributes[CUSTOM_ATTR_DX_RECORD_DATETIME] = last_changed.strftime(
+                DEFAULT_DX_RECORD_DATETIME_FORMAT
             )
             if not_append_ind is False:
                 if entity_id in self.gps_obj_dict:
@@ -116,37 +181,53 @@ class DxGpsLogger:
                     gps_obj_list = []
                     gps_obj_list.append(clone_attributes)
                     self.gps_obj_dict[entity_id] = gps_obj_list
+                if self.db_instance is not None:
+                    # 插入数据库
+                    self.db_instance.insert(
+                        """
+            INSERT INTO gps_logger_history (entity_id, longitude, latitude, gcj02_longitude, gcj02_latitude, dx_state, dx_pre_state, dx_distance, dx_record_datetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """,
+                        entity_id,
+                        longitude,
+                        latitude,
+                        clone_attributes[CUSTOM_ATTR_GCJ02_LONGITUDE],
+                        clone_attributes[CUSTOM_ATTR_GCJ02_LATITUDE],
+                        clone_attributes[CUSTOM_ATTR_DX_STATE],
+                        clone_attributes[CUSTOM_ATTR_DX_PRE_STATE],
+                        clone_attributes[CUSTOM_ATTR_DX_DISTANCE],
+                        int(last_changed.timestamp()),
+                    )
             # 修改状态
             self.hass.states.async_set(entity_id, now_state, clone_attributes)
 
     async def _transform_gps(self, entity_id, latitude, longitude):
-        _LOGGER.info("_transform_gps")
+        _LOGGER.debug("Start method _transform_gps")
         key = self.gaode_server_key
         locations = str(longitude) + "," + str(latitude)
 
         last_gpslogger = self.get_last_obj_4_entity_id(entity_id)
 
         if last_gpslogger is not None:
-            last_gpslogger_gcj02_longitude = last_gpslogger["gcj02_longitude"]
-            last_gpslogger_gcj02_latitude = last_gpslogger["gcj02_latitude"]
-            last_gpslogger_longitude = last_gpslogger["longitude"]
-            last_gpslogger_latitude = last_gpslogger["latitude"]
+            last_gpslogger_gcj02_longitude = last_gpslogger[CUSTOM_ATTR_GCJ02_LONGITUDE]
+            last_gpslogger_gcj02_latitude = last_gpslogger[CUSTOM_ATTR_GCJ02_LATITUDE]
+            last_gpslogger_longitude = last_gpslogger[ATTR_LONGITUDE]
+            last_gpslogger_latitude = last_gpslogger[ATTR_LATITUDE]
             # 如果经纬度跟上次一样, 不需要调用请求
             if (
                 last_gpslogger_longitude == longitude
                 and last_gpslogger_latitude == latitude
             ):
                 return {
-                    "gcj02_longitude": last_gpslogger_gcj02_longitude,
-                    "gcj02_latitude": last_gpslogger_gcj02_latitude,
+                    CUSTOM_ATTR_GCJ02_LONGITUDE: last_gpslogger_gcj02_longitude,
+                    CUSTOM_ATTR_GCJ02_LATITUDE: last_gpslogger_gcj02_latitude,
                 }
         # 如果缓存存在, 不需要调用请求
         cache_v = get_cache(locations)
         if cache_v is not None:
             locations_arr = cache_v.split(",")
             return {
-                "gcj02_longitude": locations_arr[0],
-                "gcj02_latitude": locations_arr[1],
+                CUSTOM_ATTR_GCJ02_LONGITUDE: locations_arr[0],
+                CUSTOM_ATTR_GCJ02_LATITUDE: locations_arr[1],
             }
 
         parse_locations = None
@@ -167,7 +248,7 @@ class DxGpsLogger:
                     parse_locations = data.get("locations")
                 else:
                     _LOGGER.error(
-                        "status: %s info: %s  parse location: %s",
+                        "Status: %s info: %s  parse location: %s",
                         status,
                         info,
                         locations,
@@ -186,8 +267,8 @@ class DxGpsLogger:
         parse_latitude = str(round(float(parse_locations_arr[1]), 6))
         set_cache(locations, parse_longitude + "," + parse_latitude)
         return {
-            "gcj02_longitude": parse_longitude,
-            "gcj02_latitude": parse_latitude,
+            CUSTOM_ATTR_GCJ02_LONGITUDE: parse_longitude,
+            CUSTOM_ATTR_GCJ02_LATITUDE: parse_latitude,
         }
 
     def _handle_origins(self, zone_list):
@@ -195,53 +276,53 @@ class DxGpsLogger:
         origins_list = []
         for zone in zone_list:
             attributes = zone.attributes
-            gcj02_longitude = attributes.get("gcj02_longitude")
-            gcj02_latitude = attributes.get("gcj02_latitude")
-            radius = attributes.get("radius")
+            gcj02_longitude = attributes.get(CUSTOM_ATTR_GCJ02_LONGITUDE)
+            gcj02_latitude = attributes.get(CUSTOM_ATTR_GCJ02_LATITUDE)
+            radius = attributes.get(CONF_RADIUS)
             entity_id = zone.entity_id
             if gcj02_longitude and gcj02_latitude:
                 l = str(gcj02_longitude) + "," + str(gcj02_latitude)
                 origins_list.append(l)
                 origins_zone = {
-                    "entity_id": entity_id,
-                    "radius": radius,
-                    "zone": zone,
+                    ATTR_ENTITY_ID: entity_id,
+                    CONF_RADIUS: radius,
+                    CONF_ZONE: zone,
                 }
                 origins_zone_list.append(origins_zone)
         return origins_zone_list, "|".join(origins_list)
 
     async def _calc_distance_of_zone(self, entity_id, new_state, ll):
-        _LOGGER.info("_calc_distance_of_zone")
+        _LOGGER.debug("Start _calc_distance_of_zone")
         key = self.gaode_server_key
 
-        gcj02_longitude = ll["gcj02_longitude"]
-        gcj02_latitude = ll["gcj02_latitude"]
+        gcj02_longitude = ll[CUSTOM_ATTR_GCJ02_LONGITUDE]
+        gcj02_latitude = ll[CUSTOM_ATTR_GCJ02_LATITUDE]
         # 如果经纬度跟上次一样, 不需要调用请求
         last_gpslogger = self.get_last_obj_4_entity_id(entity_id)
         last_gpslogger_dx_state = ""
         if last_gpslogger is not None:
-            last_gpslogger_gcj02_longitude = last_gpslogger["gcj02_longitude"]
-            last_gpslogger_gcj02_latitude = last_gpslogger["gcj02_latitude"]
-            last_gpslogger_dx_state = last_gpslogger["dx_state"]
+            last_gpslogger_gcj02_longitude = last_gpslogger[CUSTOM_ATTR_GCJ02_LONGITUDE]
+            last_gpslogger_gcj02_latitude = last_gpslogger[CUSTOM_ATTR_GCJ02_LATITUDE]
+            last_gpslogger_dx_state = last_gpslogger[CUSTOM_ATTR_DX_STATE]
             if (
                 gcj02_longitude == last_gpslogger_gcj02_longitude
                 and gcj02_latitude == last_gpslogger_gcj02_latitude
             ):
                 return {
-                    "dx_state": last_gpslogger_dx_state,
-                    "dx_distance": last_gpslogger["dx_distance"],
-                    "dx_pre_state": last_gpslogger_dx_state,
+                    CUSTOM_ATTR_DX_STATE: last_gpslogger_dx_state,
+                    CUSTOM_ATTR_DX_DISTANCE: last_gpslogger[CUSTOM_ATTR_DX_DISTANCE],
+                    CUSTOM_ATTR_DX_PRE_STATE: last_gpslogger_dx_state,
                 }
 
         return_value = None
         hass = self.hass
-        zone_list = hass.states.async_all(["zone"])
+        zone_list = hass.states.async_all([CONF_ZONE])
         origins_zone_list, origins = self._handle_origins(zone_list)
         if len(origins_zone_list) == 0:
             return {
-                "dx_state": new_state,
-                "dx_distance": -1,
-                "dx_pre_state": "",
+                CUSTOM_ATTR_DX_STATE: new_state,
+                CUSTOM_ATTR_DX_DISTANCE: -1,
+                CUSTOM_ATTR_DX_PRE_STATE: "",
             }
 
         destination = gcj02_longitude + "," + gcj02_latitude
@@ -271,21 +352,21 @@ class DxGpsLogger:
                         distance = result.get("distance")
                         origins_zone = origins_zone_list[int(origin_id) - 1]
                         # entity_id, radius, state, zone
-                        radius = origins_zone["radius"]
-                        zone_entity_id = origins_zone["entity_id"]
+                        radius = origins_zone[CONF_RADIUS]
+                        zone_entity_id = origins_zone[ATTR_ENTITY_ID]
                         # 在范围内
                         if int(radius) > int(distance):
                             if zone_entity_id == "zone.home":
                                 return_value = {
-                                    "dx_state": STATE_HOME,
-                                    "dx_distance": int(distance),
-                                    "dx_pre_state": last_gpslogger_dx_state,
+                                    CUSTOM_ATTR_DX_STATE: STATE_HOME,
+                                    CUSTOM_ATTR_DX_DISTANCE: int(distance),
+                                    CUSTOM_ATTR_DX_PRE_STATE: last_gpslogger_dx_state,
                                 }
                             else:
                                 return_value = {
-                                    "dx_state": zone_entity_id,
-                                    "dx_distance": int(distance),
-                                    "dx_pre_state": last_gpslogger_dx_state,
+                                    CUSTOM_ATTR_DX_STATE: zone_entity_id,
+                                    CUSTOM_ATTR_DX_DISTANCE: int(distance),
+                                    CUSTOM_ATTR_DX_PRE_STATE: last_gpslogger_dx_state,
                                 }
                 else:
                     _LOGGER.error("status: %s info: %s", status, info)
@@ -294,7 +375,7 @@ class DxGpsLogger:
                     )
 
         except Exception as e:
-            _LOGGER.error(str(e))
+            _LOGGER.error("高德地图距离计算错误: %s", str(e))
             raise GaoDeException("高德地图距离计算错误: " + str(e))
         finally:
             await session.close()
@@ -302,21 +383,59 @@ class DxGpsLogger:
             return return_value
         else:
             return {
-                "dx_state": STATE_NOT_HOME,
-                "dx_distance": -1,
-                "dx_pre_state": last_gpslogger_dx_state,
+                CUSTOM_ATTR_DX_STATE: STATE_NOT_HOME,
+                CUSTOM_ATTR_DX_DISTANCE: -1,
+                CUSTOM_ATTR_DX_PRE_STATE: last_gpslogger_dx_state,
             }
 
 
-class DxGpsLoggerView(HomeAssistantView):
+class DxGpsLoggerCacheView(HomeAssistantView):
+    """
+    API for search in cache
+    """
+
     url = "/api/dx/gps/gps_list_by_entity_id"
     name = "search gps_list by entity_id"
     gps_logger_instance = None
 
-    def __init__(self, gps_logger_instance):
+    def __init__(self, gps_logger_instance) -> None:
         self.gps_logger_instance = gps_logger_instance
 
     async def get(self, request):
-        entity_id = request.query.get("entity_id")
+        """
+        get gps data by entity_id in cache
+        """
+        entity_id = request.query.get(ATTR_ENTITY_ID)
         obj_list = self.gps_logger_instance.get_obj_list_by_entity_id(entity_id)
         return web.json_response(obj_list)
+
+
+class DxGpsLoggerSearchView(HomeAssistantView):
+    """
+    API for search gps in db
+    """
+
+    url = "/api/dx/gps/gps_list_from_db"
+    name = "search gps_list in db"
+    db_instance = None
+
+    def __init__(self, db_instance: DxDb) -> None:
+        self.db_instance = db_instance
+
+    async def get(self, request):
+        """
+        get gps data by entity_id in cache
+        """
+        entity_id = request.query.get(ATTR_ENTITY_ID)
+        start_time_seconds = request.query.get("start_time_seconds")
+        end_time_seconds = request.query.get("end_time_seconds")
+
+        rows = self.db_instance.search(
+            """
+            select entity_id, gcj02_longitude, gcj02_latitude, dx_record_datetime from gps_logger_history where entity_id = ? and dx_record_datetime > ? and dx_record_datetime < ? order by dx_record_datetime asc
+        """,
+            entity_id,
+            start_time_seconds,
+            end_time_seconds,
+        )
+        return web.json_response(rows)

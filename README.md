@@ -52,4 +52,4 @@ not_home: 不在任何范围内
 ```
 - dx_pre_state: 设备前一个状态, 状态值同 ```dx_state```
 - dx_distance: 当进入范围内, 距离中心的距离, 如果不在范围内, 值为 -1
-- dx_record_datetime: GPSLogger上报时间
+- `dx_record_datetime`: GPSLogger上报时间
