@@ -13,6 +13,11 @@
 
 需要配合[ha_gaode](https://github.com/d380025303/ha_gaode) 一起食用
 
+# 更新
++ v3.0
+ + GPSLogger可存储到数据库了(实现根据时间绘制路径轨迹功能)
+
+# 安装
 ## 手动安装
 * 1. 下载 `custom_components\ha_gaode_server` 下的所有文件
 * 2. 复制到 `\config\custom_components` (包括ha_gaode_server文件夹)
@@ -25,6 +30,8 @@
       gaode_server_key: 你的高德serverkey  
       # 是否同步修改GPSLogger实体的状态, 虽然本项目状态与GPSLogger一致, 但某些其它包可能会自定义状态(比如本项目2.0版本,已调整), 可将此设置为 False
       change_gpslogger_state: True 
+      # 数据库名称, 为SQLite数据库, 默认存储在config/dx_db.db文件中
+      db_url: dx_db.db
     ```
 
 ~~## HACS 安装~~
