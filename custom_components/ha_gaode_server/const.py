@@ -4,10 +4,10 @@ DOMAIN: Final = "ha_gaode_server"
 """
 CONFIG
 """
-CONFIG_DB: Final = "config_db"
 CONFIG_DB_URL: Final = "db_url"
 CONFIG_CHANGE_GPSLOGGER_STATE: Final = "change_gpslogger_state"
 CONFIG_GAODE_SERVER_KEY: Final = "gaode_server_key"
+CONFIG_IGNORE_TRANSFORM_DEVICE_TRACKERS: Final = "ignore_transform_device_trackers"
 """
 DEFAULT VALUE
 """

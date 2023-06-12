@@ -29,7 +29,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-from .db import DxDb
 
 
 class DxGpsLogger:
@@ -41,12 +40,16 @@ class DxGpsLogger:
     gaode_server_key = None
     change_gpslogger_state = True
     db_instance: DxDb = None
+    ignore_transform_device_trackers = []
 
     def __init__(self, hass: HomeAssistant, config: Config) -> None:
         self.hass = hass
         self.gaode_server_key = config.get("gaode_server_key")
         self.change_gpslogger_state = config.get("change_gpslogger_state")
         self.db_instance = config.get("db_instance")
+        self.ignore_transform_device_trackers = config.get(
+            "ignore_transform_device_trackers"
+        )
 
     async def clear_gps_obj_dict(self, now):
         """
@@ -202,6 +205,16 @@ class DxGpsLogger:
 
     async def _transform_gps(self, entity_id, latitude, longitude):
         _LOGGER.debug("Start method _transform_gps")
+        if (
+            self.ignore_transform_device_trackers is not None
+            and entity_id in self.ignore_transform_device_trackers
+        ):
+            # 无需转换的实体
+            return {
+                CUSTOM_ATTR_GCJ02_LONGITUDE: str(round(longitude, 6)),
+                CUSTOM_ATTR_GCJ02_LATITUDE: str(round(latitude, 6)),
+            }
+
         key = self.gaode_server_key
         locations = str(longitude) + "," + str(latitude)
 
@@ -258,7 +271,7 @@ class DxGpsLogger:
                     )
         except Exception as e:
             _LOGGER.error(str(e))
-            raise GaoDeException("高德地图地址转换错误: " + str(e))
+            raise GaoDeException("高德地图地址转换错误: %s", str(e))
         finally:
             await session.close()
         # 获取到的经纬度
@@ -369,7 +382,7 @@ class DxGpsLogger:
                                     CUSTOM_ATTR_DX_PRE_STATE: last_gpslogger_dx_state,
                                 }
                 else:
-                    _LOGGER.error("status: %s info: %s", status, info)
+                    _LOGGER.error("Status: %s info: %s", status, info)
                     raise GaoDeException(
                         "高德地图距离计算错误 status: " + status + " info: " + info
                     )

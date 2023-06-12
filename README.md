@@ -16,6 +16,8 @@
 # 更新
 + v3.0
  + GPSLogger可存储到数据库了(实现根据时间绘制路径轨迹功能)
++ v4.0
+ + 增加配置可使某些device_trackers不自动做高德坐标转换
 
 # 安装
 ## 手动安装
@@ -32,6 +34,9 @@
       change_gpslogger_state: True 
       # 数据库名称, 为SQLite数据库, 默认存储在config/dx_db.db文件中
       db_url: dx_db.db
+      # 不做高德转换device_trackers列表
+      ignore_transform_device_trackers:
+        - device_trackers.XXXXX
     ```
 
 ~~## HACS 安装~~

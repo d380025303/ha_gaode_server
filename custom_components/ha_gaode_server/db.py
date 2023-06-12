@@ -15,7 +15,7 @@ class DxDb:
 
     def __init__(self, url) -> None:
         conn = sqlite3.connect(url)
-        _LOGGER.debug("DxDb Init...")
+        _LOGGER.debug("DxDb Init")
         self.connection = conn
         self._init_table()
 
@@ -43,7 +43,7 @@ class DxDb:
         except Exception as e:
             cursor.close()
             conn.rollback()
-            raise DbException("初始化table错误: " + str(e))
+            raise DbException("初始化table错误: %s", str(e))
 
     def search(self, sql: str, *args):
         """
@@ -69,7 +69,7 @@ class DxDb:
             cursor.close()
             return return_rows
         except Exception as e:
-            raise DbException("Search 错误: " + str(e))
+            raise DbException("Search 错误: %s", str(e))
 
     def insert(self, sql: str, *args):
         """

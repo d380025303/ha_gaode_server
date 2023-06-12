@@ -1,10 +1,12 @@
 {
     "domain": "ha_gaode_server",
     "name": "Ha Gaode Server",
+    "codeowners": [],
+    "dependencies": [],
     "documentation": "https://github.com/d380025303/ha_gaode_server",
     "issue_tracker": "https://github.com/d380025303/ha_gaode_server/issues",
     "iot_class": "local_polling",
     "requirements": [],
-    "version": "3.0",
+    "version": "4.0",
     "config_flow": false
   }
