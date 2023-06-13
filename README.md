@@ -17,7 +17,10 @@
 + v3.0
  + GPSLogger可存储到数据库了(实现根据时间绘制路径轨迹功能)
 + v4.0
- + 增加配置可使某些device_trackers不自动做高德坐标转换
+ + 增加配置可使某些device_tracker不自动做高德坐标转换
++ v4.1
+ + 增加配置可在device_tracker上报后将数据通过POST请求推送
+
 
 # 安装
 ## 手动安装
@@ -37,6 +40,8 @@
       # 不做高德转换device_trackers列表
       ignore_transform_device_trackers:
         - device_trackers.XXXXX
+      # device_tracker上报后POST请求地址
+      push_device_trackers_post: 
     ```
 
 ~~## HACS 安装~~

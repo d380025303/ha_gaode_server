@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
 import aiohttp
+from aiohttp import ClientSession
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
 from .cache import get_cache, set_cache
 from .dx_exception import GaoDeException
 from homeassistant.components.http import HomeAssistantView
@@ -41,6 +44,7 @@ class DxGpsLogger:
     change_gpslogger_state = True
     db_instance: DxDb = None
     ignore_transform_device_trackers = []
+    push_device_trackers_post = None
 
     def __init__(self, hass: HomeAssistant, config: Config) -> None:
         self.hass = hass
@@ -50,6 +54,7 @@ class DxGpsLogger:
         self.ignore_transform_device_trackers = config.get(
             "ignore_transform_device_trackers"
         )
+        self.push_device_trackers_post = config.get("push_device_trackers_post")
 
     async def clear_gps_obj_dict(self, now):
         """
@@ -200,6 +205,17 @@ class DxGpsLogger:
                         clone_attributes[CUSTOM_ATTR_DX_DISTANCE],
                         int(last_changed.timestamp()),
                     )
+                if self.push_device_trackers_post is not None:
+                    # 调用服务
+                    request_data = {"entity_id": entity_id}
+                    request_data.update(clone_attributes)
+                    session: ClientSession = async_get_clientsession(self.hass, False)
+                    async with session.request(
+                        "POST", self.push_device_trackers_post, data=request_data
+                    ) as response:
+                        response_data = await response.json()
+                        _LOGGER.debug("Resp data: %s", response_data)
+
             # 修改状态
             self.hass.states.async_set(entity_id, now_state, clone_attributes)
 

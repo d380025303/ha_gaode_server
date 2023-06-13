@@ -27,6 +27,7 @@ from .const import (
     CONFIG_CHANGE_GPSLOGGER_STATE,
     CONFIG_GAODE_SERVER_KEY,
     CONFIG_IGNORE_TRANSFORM_DEVICE_TRACKERS,
+    CONFIG_PUSH_DEVICE_TRACKERS_POST,
 )
 
 
@@ -47,6 +48,7 @@ def handle_config(hass: HomeAssistant, config: Config):
     change_gpslogger_state = None
     db_url = None
     ignore_transform_device_trackers = None
+    push_device_trackers_post = None
     if entry_config is not None:
         gaode_server_key = entry_config.get(CONFIG_GAODE_SERVER_KEY)
         change_gpslogger_state = entry_config.get(CONFIG_CHANGE_GPSLOGGER_STATE)
@@ -59,6 +61,9 @@ def handle_config(hass: HomeAssistant, config: Config):
         if gaode_server_key is None:
             raise ConfigException("未配置高德地图key")
         change_gpslogger_state = ha_gaode_server.get(CONFIG_CHANGE_GPSLOGGER_STATE)
+        push_device_trackers_post = ha_gaode_server.get(
+            CONFIG_PUSH_DEVICE_TRACKERS_POST
+        )
         ignore_transform_device_trackers = ha_gaode_server.get(
             CONFIG_IGNORE_TRANSFORM_DEVICE_TRACKERS
         )
@@ -74,6 +79,7 @@ def handle_config(hass: HomeAssistant, config: Config):
         CONFIG_CHANGE_GPSLOGGER_STATE: change_gpslogger_state,
         CONFIG_DB_URL: db_url,
         CONFIG_IGNORE_TRANSFORM_DEVICE_TRACKERS: ignore_transform_device_trackers,
+        CONFIG_PUSH_DEVICE_TRACKERS_POST: push_device_trackers_post,
     }
 
 
@@ -94,6 +100,7 @@ def async_setup(hass: HomeAssistant, config: Config) -> bool:
         change_gpslogger_state,
         db_url,
         ignore_transform_device_trackers,
+        push_device_trackers_post,
     ) = dx_config.values()
 
     # 实例化数据库
@@ -106,6 +113,7 @@ def async_setup(hass: HomeAssistant, config: Config) -> bool:
             "change_gpslogger_state": change_gpslogger_state,
             "db_instance": db_instance,
             "ignore_transform_device_trackers": ignore_transform_device_trackers,
+            "push_device_trackers_post": push_device_trackers_post,
         },
     )
     zone_instance = DxZone(hass)
