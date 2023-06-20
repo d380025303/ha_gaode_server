@@ -2,9 +2,9 @@
  * @Author        : dx
  * @Github        : https://github.com/d380025303
  * @Description   : 
- * @Date          : 2023-06-04
+ * @Date          : 2023-06-20
  * @LastEditors   : dx
- * @LastEditTime  : 2023-06-04 14:56:00
+ * @LastEditTime  : 2023-06-20 14:56:00
  -->
 
 # Ha Gaode Server
@@ -20,6 +20,8 @@
  + 增加配置可使某些device_tracker不自动做高德坐标转换
 + v4.1
  + 增加配置可在device_tracker上报后将数据通过POST请求推送
++ v5.0
+ + 支持多边形范围计算
 
 
 # 安装

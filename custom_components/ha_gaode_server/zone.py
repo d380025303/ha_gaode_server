@@ -24,6 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class DxZone:
+    """ Hanlde zone"""
     gps_obj_list = {}
 
     def __init__(self, hass):

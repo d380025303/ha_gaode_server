@@ -23,8 +23,8 @@ class HaGaodeServerFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
-        errors = {}
         """Handle a flow initialized by the user."""
+        errors = {}
         if self._async_current_entries():
             return self.async_abort(reason="already_configured")
 

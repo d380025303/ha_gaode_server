@@ -25,6 +25,6 @@ CUSTOM_ATTR_GCJ02_LATITUDE: Final = "gcj02_latitude"
 CUSTOM_ATTR_DX_STATE: Final = "dx_state"
 CUSTOM_ATTR_DX_DISTANCE: Final = "dx_distance"
 CUSTOM_ATTR_DX_PRE_STATE: Final = "dx_pre_state"
-
+CUSTOM_ATTR_DX_POLYGON: Final = "dx_polygon"
 
 EVENT_NEW_STATE = "new_state"

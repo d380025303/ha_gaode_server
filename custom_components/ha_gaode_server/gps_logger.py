@@ -28,6 +28,7 @@ from .const import (
     CUSTOM_ATTR_DX_STATE,
     CUSTOM_ATTR_DX_DISTANCE,
     CUSTOM_ATTR_DX_PRE_STATE,
+    CUSTOM_ATTR_DX_POLYGON,
     DEFAULT_DX_RECORD_DATETIME_FORMAT,
 )
 
@@ -308,6 +309,7 @@ class DxGpsLogger:
             gcj02_longitude = attributes.get(CUSTOM_ATTR_GCJ02_LONGITUDE)
             gcj02_latitude = attributes.get(CUSTOM_ATTR_GCJ02_LATITUDE)
             radius = attributes.get(CONF_RADIUS)
+            dx_polygon = attributes.get(CUSTOM_ATTR_DX_POLYGON)
             entity_id = zone.entity_id
             if gcj02_longitude and gcj02_latitude:
                 l = str(gcj02_longitude) + "," + str(gcj02_latitude)
@@ -316,9 +318,37 @@ class DxGpsLogger:
                     ATTR_ENTITY_ID: entity_id,
                     CONF_RADIUS: radius,
                     CONF_ZONE: zone,
+                    CUSTOM_ATTR_DX_POLYGON: dx_polygon,
                 }
                 origins_zone_list.append(origins_zone)
         return origins_zone_list, "|".join(origins_list)
+
+    def is_in_poly(self, p, poly):
+        """
+        :param p: [x, y]
+        :param poly: [[], [], [], [], ...]
+        :return:
+        """
+        px, py = p
+        is_in = False
+        for i, corner in enumerate(poly):
+            next_i = i + 1 if i + 1 < len(poly) else 0
+            x1, y1 = corner
+            x2, y2 = poly[next_i]
+            # 点在顶点上
+            if (x1 == px and y1 == py) or (x2 == px and y2 == py):
+                is_in = True
+                break
+            if min(y1, y2) < py <= max(y1, y2):  # find horizontal edges of polygon
+                x = x1 + (py - y1) * (x2 - x1) / (y2 - y1)
+                # 点在边上
+                if x == px:
+                    is_in = True
+                    break
+                # 点在线左边
+                elif x > px:
+                    is_in = not is_in
+        return is_in
 
     async def _calc_distance_of_zone(self, entity_id, new_state, ll):
         _LOGGER.debug("Start _calc_distance_of_zone")
@@ -370,7 +400,6 @@ class DxGpsLogger:
                 + "&coordsys=gps"
             ) as response:
                 data = await response.json()
-
                 status = data.get("status")
                 info = data.get("info")
                 if status == "1" and info == "OK":
@@ -382,9 +411,22 @@ class DxGpsLogger:
                         origins_zone = origins_zone_list[int(origin_id) - 1]
                         # entity_id, radius, state, zone
                         radius = origins_zone[CONF_RADIUS]
+                        polygon = origins_zone[CUSTOM_ATTR_DX_POLYGON]
                         zone_entity_id = origins_zone[ATTR_ENTITY_ID]
-                        # 在范围内
-                        if int(radius) > int(distance):
+                        # 如果有多边形记录优先计算多边形
+                        is_in = False
+                        if polygon is not None and polygon != "":
+                            arr_1 = polygon.split(";")
+                            arr_2 = [
+                                list(map(float, elem.split(","))) for elem in arr_1
+                            ]
+                            p = [float(gcj02_longitude), float(gcj02_latitude)]
+                            _LOGGER.info(arr_2)
+                            _LOGGER.info(p)
+                            is_in = self.is_in_poly(p, arr_2)
+                        else:
+                            is_in = int(radius) > int(distance)
+                        if is_in:
                             if zone_entity_id == "zone.home":
                                 return_value = {
                                     CUSTOM_ATTR_DX_STATE: STATE_HOME,
