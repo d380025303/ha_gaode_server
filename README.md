@@ -2,9 +2,9 @@
  * @Author        : dx
  * @Github        : https://github.com/d380025303
  * @Description   : 
- * @Date          : 2023-06-20
+ * @Date          : 2023-07-05
  * @LastEditors   : dx
- * @LastEditTime  : 2023-06-20 14:56:00
+ * @LastEditTime  : 2023-07-05 14:56:00
  -->
 
 # Ha Gaode Server
@@ -22,6 +22,8 @@
  + 增加配置可在device_tracker上报后将数据通过POST请求推送
 + v5.0
  + 支持多边形范围计算
++ v5.1
+ + 增加配置可使某些device_tracker不做距离计算
 
 
 # 安装
@@ -41,6 +43,9 @@
       db_url: dx_db.db
       # 不做高德转换device_trackers列表
       ignore_transform_device_trackers:
+        - device_trackers.XXXXX
+      # 不做距离计算的device_tracker列表
+      ignore_distance_device_trackers:
         - device_trackers.XXXXX
       # device_tracker上报后POST请求地址
       push_device_trackers_post: 

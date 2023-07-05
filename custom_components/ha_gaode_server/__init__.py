@@ -26,6 +26,7 @@ from .const import (
     CONFIG_DB_URL,
     CONFIG_CHANGE_GPSLOGGER_STATE,
     CONFIG_GAODE_SERVER_KEY,
+    CONFIG_IGNORE_DISTANCE_DEVICE_TRACKERS,
     CONFIG_IGNORE_TRANSFORM_DEVICE_TRACKERS,
     CONFIG_PUSH_DEVICE_TRACKERS_POST,
 )
@@ -48,6 +49,7 @@ def handle_config(hass: HomeAssistant, config: Config):
     change_gpslogger_state = None
     db_url = None
     ignore_transform_device_trackers = None
+    ignore_device_trackers = None
     push_device_trackers_post = None
     if entry_config is not None:
         gaode_server_key = entry_config.get(CONFIG_GAODE_SERVER_KEY)
@@ -67,6 +69,9 @@ def handle_config(hass: HomeAssistant, config: Config):
         ignore_transform_device_trackers = ha_gaode_server.get(
             CONFIG_IGNORE_TRANSFORM_DEVICE_TRACKERS
         )
+        ignore_distance_device_trackers = ha_gaode_server.get(
+            CONFIG_IGNORE_DISTANCE_DEVICE_TRACKERS
+        )
         if change_gpslogger_state is None:
             change_gpslogger_state = True
         db_url = ha_gaode_server.get(CONFIG_DB_URL)
@@ -79,6 +84,7 @@ def handle_config(hass: HomeAssistant, config: Config):
         CONFIG_CHANGE_GPSLOGGER_STATE: change_gpslogger_state,
         CONFIG_DB_URL: db_url,
         CONFIG_IGNORE_TRANSFORM_DEVICE_TRACKERS: ignore_transform_device_trackers,
+        CONFIG_IGNORE_DISTANCE_DEVICE_TRACKERS: ignore_distance_device_trackers,
         CONFIG_PUSH_DEVICE_TRACKERS_POST: push_device_trackers_post,
     }
 
@@ -100,6 +106,7 @@ def async_setup(hass: HomeAssistant, config: Config) -> bool:
         change_gpslogger_state,
         db_url,
         ignore_transform_device_trackers,
+        ignore_distance_device_trackers,
         push_device_trackers_post,
     ) = dx_config.values()
 
@@ -113,6 +120,7 @@ def async_setup(hass: HomeAssistant, config: Config) -> bool:
             "change_gpslogger_state": change_gpslogger_state,
             "db_instance": db_instance,
             "ignore_transform_device_trackers": ignore_transform_device_trackers,
+            "ignore_distance_device_trackers": ignore_distance_device_trackers,
             "push_device_trackers_post": push_device_trackers_post,
         },
     )

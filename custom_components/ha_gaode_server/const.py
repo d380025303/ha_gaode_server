@@ -7,6 +7,7 @@ CONFIG
 CONFIG_DB_URL: Final = "db_url"
 CONFIG_CHANGE_GPSLOGGER_STATE: Final = "change_gpslogger_state"
 CONFIG_GAODE_SERVER_KEY: Final = "gaode_server_key"
+CONFIG_IGNORE_DISTANCE_DEVICE_TRACKERS: Final = "ignore_distance_device_trackers"
 CONFIG_IGNORE_TRANSFORM_DEVICE_TRACKERS: Final = "ignore_transform_device_trackers"
 CONFIG_PUSH_DEVICE_TRACKERS_POST: Final = "push_device_trackers_post"
 

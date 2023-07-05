@@ -45,6 +45,7 @@ class DxGpsLogger:
     change_gpslogger_state = True
     db_instance: DxDb = None
     ignore_transform_device_trackers = []
+    ignore_distance_device_trackers = None
     push_device_trackers_post = None
 
     def __init__(self, hass: HomeAssistant, config: Config) -> None:
@@ -54,6 +55,9 @@ class DxGpsLogger:
         self.db_instance = config.get("db_instance")
         self.ignore_transform_device_trackers = config.get(
             "ignore_transform_device_trackers"
+        )
+        self.ignore_distance_device_trackers = config.get(
+            "ignore_distance_device_trackers"
         )
         self.push_device_trackers_post = config.get("push_device_trackers_post")
 
@@ -352,6 +356,15 @@ class DxGpsLogger:
 
     async def _calc_distance_of_zone(self, entity_id, new_state, ll):
         _LOGGER.debug("Start _calc_distance_of_zone")
+        if (
+            self.ignore_distance_device_trackers is not None
+            and entity_id in self.ignore_distance_device_trackers
+        ):
+            return {
+                CUSTOM_ATTR_DX_STATE: new_state,
+                CUSTOM_ATTR_DX_DISTANCE: -1,
+                CUSTOM_ATTR_DX_PRE_STATE: "",
+            }
         key = self.gaode_server_key
 
         gcj02_longitude = ll[CUSTOM_ATTR_GCJ02_LONGITUDE]
