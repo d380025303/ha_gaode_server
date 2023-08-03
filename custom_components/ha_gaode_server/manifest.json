@@ -7,6 +7,6 @@
     "issue_tracker": "https://github.com/d380025303/ha_gaode_server/issues",
     "iot_class": "local_polling",
     "requirements": [],
-    "version": "5.0",
+    "version": "5.1.1",
     "config_flow": false
   }

@@ -124,9 +124,9 @@ def async_setup(hass: HomeAssistant, config: Config) -> bool:
             "push_device_trackers_post": push_device_trackers_post,
         },
     )
-    zone_instance = DxZone(hass)
+    zone_view_instance = DxZoneView(hass)
+    zone_instance = DxZone(hass, zone_view_instance)
     gpslogger_cache_view_instance = DxGpsLoggerCacheView(gpslogger_instance)
-    zone_view_instance = DxZoneView(zone_instance, hass)
     gpslogger_search_view_instance = DxGpsLoggerSearchView(db_instance)
 
     async def handle_event(event):

@@ -24,10 +24,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class DxZone:
-    """ Hanlde zone"""
-    gps_obj_list = {}
+    """Hanlde zone"""
 
-    def __init__(self, hass):
+    gps_obj_list = {}
+    zone_view_instance = None
+
+    def __init__(self, hass, zone_view_instance):
+        self.zone_view_instance = zone_view_instance
         self.hass = hass
 
     async def handle_zone_event(self, event):
@@ -57,6 +60,16 @@ class DxZone:
                 str(latitude),
                 str(longitude),
             )
+            zone_view_instance = self.zone_view_instance
+            file_data = await zone_view_instance.get_by_entity_id_in_file(entity_id)
+            if file_data is not None:
+                file_data = {
+                    k: v
+                    for k, v in file_data.items()
+                    if k in ["gcj02_longitude", "gcj02_latitude", "dx_polygon"]
+                }
+                file_data[ATTR_ENTITY_ID] = entity_id
+                await zone_view_instance.save(file_data)
 
 
 class DxZoneView(HomeAssistantView):
@@ -64,12 +77,10 @@ class DxZoneView(HomeAssistantView):
 
     url = "/api/dx/zone/save"
     name = "save zone entity"
-    zone_instance = None
     hass = None
     absolute_file_name = DEFAULT_ZONE_STORE_NAME
 
-    def __init__(self, zone_instance, hass) -> None:
-        self.zone_instance = zone_instance
+    def __init__(self, hass) -> None:
         self.hass = hass
         config_dir = hass.config.path()
         self.absolute_file_name = os.path.join(config_dir, DEFAULT_ZONE_STORE_NAME)
@@ -81,6 +92,14 @@ class DxZoneView(HomeAssistantView):
         # entity_id = request.query.get("entity_id")
         # obj_list = self.gps_logger_instance.get_obj_list_by_entity_id(entity_id)
         return web.json_response({"msg": "ok"})
+
+    async def get_by_entity_id_in_file(self, entity_id):
+        """get saved data by entity_id"""
+        if os.path.exists(self.absolute_file_name):
+            with open(self.absolute_file_name, "r", encoding="utf-8") as file:
+                save_data = json.load(file)
+                return_data = save_data.get(entity_id)
+                return return_data
 
     async def save(self, data):
         """To save zone entity"""
